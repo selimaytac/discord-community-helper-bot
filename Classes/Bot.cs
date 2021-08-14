@@ -12,6 +12,7 @@ namespace DiscordBot.Classes
     {
         private static DiscordClient Discord;
         private static CommandsNextExtension Commands;
+        public static ulong ApplicationId = 0;
 
         public static DiscordClient GetBotInstance()
         {
@@ -20,7 +21,7 @@ namespace DiscordBot.Classes
                 {
                     Token = "",
                     TokenType = TokenType.Bot,
-                    Intents = DiscordIntents.AllUnprivileged
+                    Intents = DiscordIntents.AllUnprivileged,
                 });
 
             return Discord;
