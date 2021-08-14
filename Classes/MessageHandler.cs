@@ -169,7 +169,7 @@ namespace DiscordBot.Classes
         //[Command("")]
         //public async Task Command(CommandContext ctx, DiscordMember member)
         //{
-            
+
         //}
         //#endregion
 
