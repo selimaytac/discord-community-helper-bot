@@ -132,7 +132,7 @@ namespace DiscordBot.Classes
             if (ctx.Member.Hierarchy >= ctx.Guild.GetMemberAsync(Bot.ApplicationId).Result.Hierarchy)
             {
                 if (member.VoiceState.Channel == toChannel)
-                    await ctx.RespondAsync($"{member.Username} is already on this channel.");
+                    await ctx.RespondAsync($"{member.Username} is already in this channel.");
                 else
                 {
                     await member.PlaceInAsync(toChannel);
@@ -152,26 +152,18 @@ namespace DiscordBot.Classes
 
                 if (users != null && users.Count != 0)
                     if (users.Count == users.Where(x => x.VoiceState.Channel == toChannel).ToList().Count)
-                        await ctx.RespondAsync("You are already on this channel.");
+                        await ctx.RespondAsync("You are already in this channel.");
                     else
                     {
                         users.ForEach(x => x.PlaceInAsync(toChannel));
-                        await ctx.RespondAsync($"Everyone on channel {fromChannel.Mention} has been moved to channel {toChannel.Mention} by {ctx.Member.Username}.");
+                        await ctx.RespondAsync($"Everyone in channel {fromChannel.Mention} has been moved to channel {toChannel.Mention} by {ctx.Member.Username}.");
                     }
                 else
-                    await ctx.RespondAsync("There is no one on the channel. Please check the channel name");
+                    await ctx.RespondAsync("There is no one in the channel. Please check the channel name");
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
         }
-
-        //#region Audio
-        //[Command("")]
-        //public async Task Command(CommandContext ctx, DiscordMember member)
-        //{
-
-        //}
-        //#endregion
 
         #region test
         [Command("check")]
@@ -181,7 +173,7 @@ namespace DiscordBot.Classes
         }
 
         // Blueprint
-        [Command("3")]
+        [Command("blueprint")]
         public async Task Command(CommandContext ctx, DiscordMember member)
         {
             if (ctx.Member.Hierarchy >= ctx.Guild.GetMemberAsync(Bot.ApplicationId).Result.Hierarchy)
