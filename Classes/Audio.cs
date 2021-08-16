@@ -13,6 +13,7 @@ namespace DiscordBot.Classes
 {
     public class Audio : BaseCommandModule
     {
+        List<LavalinkTrack> tracks = new List<LavalinkTrack>();
         DiscordMember GetBot(CommandContext ctx)
         {
             return ctx.Guild.GetMemberAsync(Bot.ApplicationId).Result;
@@ -106,12 +107,12 @@ namespace DiscordBot.Classes
 
             DiscordMember bot = GetBot(ctx);
 
-            var botChannel = bot.VoiceState;
-            if (botChannel == null)
+            var botVoiceState = bot.VoiceState;
+            if (botVoiceState == null)
                 await node.ConnectAsync(ctx.Member.VoiceState.Channel);
             else
             {
-                if (bot.VoiceState.Channel != ctx.Member.VoiceState.Channel)
+                if (bot.VoiceState.Channel != ctx.Member.VoiceState.Channel && botVoiceState.Channel != null)
                 {
                     await ctx.RespondAsync($"{bot.Mention} is in another voice channel.");
                     return;
@@ -135,11 +136,26 @@ namespace DiscordBot.Classes
                 return;
             }
 
-            var track = loadResult.Tracks.First();
 
-            await conn.PlayAsync(track);
+            tracks.Add(loadResult.Tracks.First());
 
-            await ctx.RespondAsync($"Now playing {track.Title}!");
+            //var track = loadResult.Tracks.First();
+
+            if (conn.CurrentState.CurrentTrack != null)
+                if (conn.CurrentState.CurrentTrack.IsStream == false)
+                    await conn.PlayAsync(tracks.First());
+                else
+                    conn.PlaybackFinished += Conn_PlaybackFinished;
+
+
+            await ctx.RespondAsync($"Now playing {tracks.First().Title}!");
+        }
+
+        private Task Conn_PlaybackFinished(LavalinkGuildConnection sender, DSharpPlus.Lavalink.EventArgs.TrackFinishEventArgs e)
+        {
+            tracks.Remove(tracks.First());
+            sender.PlayAsync(tracks.First());
+            return Task.Delay(1000);
         }
 
         [Command]
@@ -249,8 +265,8 @@ namespace DiscordBot.Classes
                 return;
             }
 
-            if (volume > 200)
-                volume = 200;
+            //if (volume > 250)
+            //    volume = 250;
 
             await conn.SetVolumeAsync(volume);
             await ctx.RespondAsync($"Volume set to {volume}");
