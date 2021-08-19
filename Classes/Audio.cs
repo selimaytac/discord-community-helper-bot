@@ -13,7 +13,7 @@ namespace DiscordBot.Classes
 {
     public class Audio : BaseCommandModule
     {
-        List<LavalinkTrack> tracks = new List<LavalinkTrack>();
+        public static List<LavalinkTrack> tracks = Bot.NewTrackList();
         DiscordMember GetBot(CommandContext ctx)
         {
             return ctx.Guild.GetMemberAsync(Bot.ApplicationId).Result;
@@ -32,19 +32,21 @@ namespace DiscordBot.Classes
             var node = lava.ConnectedNodes.Values.First();
             var bot = GetBot(ctx);
 
-            if (bot.VoiceState.Channel != null)
-            {
-                if (bot.VoiceState.Channel == ctx.Member.VoiceState.Channel)
+            if (bot.VoiceState != null)
+                if (bot.VoiceState.Channel != null)
                 {
-                    await ctx.RespondAsync($"{bot.Mention} is already in this channel.");
-                    return;
+                    if (bot.VoiceState.Channel == ctx.Member.VoiceState.Channel)
+                    {
+                        await ctx.RespondAsync($"{bot.Mention} is already in this channel.");
+                        return;
+                    }
+                    else if (bot.VoiceState.Channel != null)
+                    {
+                        await ctx.RespondAsync($"{bot.Mention} is in another channel.");
+                        return;
+                    }
                 }
-                else if (bot.VoiceState.Channel != null)
-                {
-                    await ctx.RespondAsync($"{bot.Mention} is in another channel.");
-                    return;
-                }
-            }
+
 
             if (ctx.Member.VoiceState.Channel.Type != ChannelType.Voice)
             {
@@ -54,6 +56,7 @@ namespace DiscordBot.Classes
 
             await node.ConnectAsync(ctx.Member.VoiceState.Channel);
             await ctx.RespondAsync($"Joined {ctx.Member.VoiceState.Channel.Mention}!");
+            await Utilities.ClearMessages(ctx.Channel);
         }
 
         [Command("Join")]
@@ -91,6 +94,7 @@ namespace DiscordBot.Classes
 
             await node.ConnectAsync(channel);
             await ctx.RespondAsync($"Joined {channel.Mention}!");
+            await Utilities.ClearMessages(ctx.Channel);
         }
 
         [Command]
@@ -117,6 +121,10 @@ namespace DiscordBot.Classes
                     await ctx.RespondAsync($"{bot.Mention} is in another voice channel.");
                     return;
                 }
+                else if (bot.VoiceState.Channel == null)
+                {
+                    await node.ConnectAsync(ctx.Member.VoiceState.Channel);
+                }
             }
 
             var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
@@ -136,26 +144,101 @@ namespace DiscordBot.Classes
                 return;
             }
 
-
             tracks.Add(loadResult.Tracks.First());
 
             //var track = loadResult.Tracks.First();
 
             if (conn.CurrentState.CurrentTrack != null)
-                if (conn.CurrentState.CurrentTrack.IsStream == false)
-                    await conn.PlayAsync(tracks.First());
-                else
-                    conn.PlaybackFinished += Conn_PlaybackFinished;
-
-
-            await ctx.RespondAsync($"Now playing {tracks.First().Title}!");
+            {
+                conn.PlaybackFinished += Events.Conn_PlaybackFinished;
+                await ctx.RespondAsync($"{loadResult.Tracks.First().Title} has been added to the queue.");
+            }
+            else
+            {
+                await conn.PlayAsync(loadResult.Tracks.First());
+                await ctx.RespondAsync($"Now playing {tracks.First().Title}!");
+            }
+            await Utilities.ClearMessages(ctx.Channel);
         }
 
-        private Task Conn_PlaybackFinished(LavalinkGuildConnection sender, DSharpPlus.Lavalink.EventArgs.TrackFinishEventArgs e)
+        [Command]
+        public async Task Clear(CommandContext ctx)
         {
-            tracks.Remove(tracks.First());
-            sender.PlayAsync(tracks.First());
-            return Task.Delay(1000);
+            DiscordMember bot = GetBot(ctx);
+            var lava = ctx.Client.GetLavalink();
+            if (!lava.ConnectedNodes.Any())
+            {
+                await ctx.RespondAsync("The Lavalink connection is not established");
+                return;
+            }
+
+            if (bot.VoiceState == null || bot.VoiceState.Channel == null)
+            {
+                await ctx.RespondAsync($"{bot.Mention} is not in a voice channel.");
+                return;
+            }
+
+            var node = lava.ConnectedNodes.Values.First();
+
+            if (bot.VoiceState.Channel != null)
+                if (bot.VoiceState.Channel.Type != ChannelType.Voice)
+                {
+                    await ctx.RespondAsync("Not a valid voice channel.");
+                    return;
+                }
+
+            var conn = node.GetGuildConnection(bot.VoiceState.Channel.Guild);
+
+            if (conn == null)
+            {
+                await ctx.RespondAsync($"{bot.Mention} is not in any channel.");
+                return;
+            }
+
+            tracks.RemoveRange(0, tracks.Count);
+            await conn.StopAsync();
+            await ctx.RespondAsync($"Tracks are cleared!");
+            await Utilities.ClearMessages(ctx.Channel);
+        }
+
+        [Command]
+        public async Task Next(CommandContext ctx)
+        {
+            DiscordMember bot = GetBot(ctx);
+            var lava = ctx.Client.GetLavalink();
+            if (!lava.ConnectedNodes.Any())
+            {
+                await ctx.RespondAsync("The Lavalink connection is not established");
+                return;
+            }
+
+            if (bot.VoiceState == null || bot.VoiceState.Channel == null)
+            {
+                await ctx.RespondAsync($"{bot.Mention} is not in a voice channel.");
+                return;
+            }
+
+            var node = lava.ConnectedNodes.Values.FirstOrDefault();
+
+            if (bot.VoiceState.Channel != null)
+                if (bot.VoiceState.Channel.Type != ChannelType.Voice)
+                {
+                    await ctx.RespondAsync("Not a valid voice channel.");
+                    return;
+                }
+
+            var conn = node.GetGuildConnection(bot.VoiceState.Channel.Guild);
+
+            if (conn == null)
+            {
+                await ctx.RespondAsync($"{bot.Mention} is not in any channel.");
+                return;
+            }
+
+            tracks.Remove(tracks.FirstOrDefault());
+            await conn.PlayAsync(tracks.FirstOrDefault());
+            await ctx.RespondAsync($"Tracks are cleared!");
+            await Utilities.ClearMessages(ctx.Channel);
         }
 
         [Command]
@@ -191,9 +274,10 @@ namespace DiscordBot.Classes
                 await ctx.RespondAsync($"{bot.Mention} is not in any channel.");
                 return;
             }
-
-            await conn.DisconnectAsync(false);
+            await Clear(ctx);
+            await conn.DisconnectAsync();
             await ctx.RespondAsync($"Left {bot.VoiceState.Channel.Mention}!");
+            await Utilities.ClearMessages(ctx.Channel);
         }
 
         [Command]
@@ -250,6 +334,35 @@ namespace DiscordBot.Classes
             }
 
             await conn.ResumeAsync();
+            await Utilities.ClearMessages(ctx.Channel);
+        }
+
+        [Command]
+        public async Task Tracks(CommandContext ctx)
+        {
+            var lava = ctx.Client.GetLavalink();
+            var node = lava.ConnectedNodes.Values.First();
+            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
+
+            if (conn == null)
+            {
+                await ctx.RespondAsync($"{GetBot(ctx).Mention} is not in a voice channel.");
+                return;
+            }
+
+            if (tracks.Count > 0)
+            {
+                string Trackstr = "";
+
+                for (int i = 0; i < tracks.Count; i++)
+                {
+                    Trackstr += $"\n{i + 1}.{tracks[i].Title}";
+                }
+
+                await ctx.RespondAsync(Trackstr);
+
+                await Utilities.ClearMessages(ctx.Channel, delay: 3000);
+            }
         }
 
         [Command]
@@ -265,11 +378,12 @@ namespace DiscordBot.Classes
                 return;
             }
 
-            //if (volume > 250)
-            //    volume = 250;
+            if (volume > 250)
+                volume = 250;
 
             await conn.SetVolumeAsync(volume);
             await ctx.RespondAsync($"Volume set to {volume}");
+            await Utilities.ClearMessages(ctx.Channel);
         }
 
         [Command]
@@ -281,6 +395,9 @@ namespace DiscordBot.Classes
                     await ctx.RespondAsync(bot.Channel.ToString());
                 else
                     await ctx.RespondAsync("Clear");
+
+            await Utilities.ClearMessages(ctx.Channel);
+
         }
 
         [Command]
@@ -296,9 +413,12 @@ namespace DiscordBot.Classes
                 await ctx.RespondAsync("Cleared");
             }
             else
-            {
                 await ctx.RespondAsync("Voicestate is already clear");
-            }
+
+            await Utilities.ClearMessages(ctx.Channel);
         }
+
     }
+
+
 }

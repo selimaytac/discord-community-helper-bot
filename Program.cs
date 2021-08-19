@@ -27,7 +27,6 @@ namespace DiscordBot
             commands.RegisterCommands<MessageHandler>();
             commands.RegisterCommands(Assembly.GetExecutingAssembly());
 
-
             await discord.ConnectAsync();
             await lavalink.ConnectAsync(lavalinkConfig);
             await Task.Delay(-1);

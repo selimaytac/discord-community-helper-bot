@@ -17,12 +17,14 @@ namespace DiscordBot.Classes
         public async Task GreetCommand(CommandContext ctx)
         {
             await ctx.RespondAsync(string.Format("hi"));
+            await Utilities.ClearMessages(ctx.Channel, delay: 5000);
         }
 
         [Command("time")]
         public async Task TimeCommand(CommandContext ctx)
         {
             await ctx.RespondAsync(DateTime.Now.ToString());
+            await Utilities.ClearMessages(ctx.Channel, delay: 5000);
         }
 
         [Command("Random")]
@@ -57,6 +59,8 @@ namespace DiscordBot.Classes
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
+
+            await Utilities.ClearMessages(ctx.Channel, delay: 5000);
         }
 
         [Command("RemoveRole")]
@@ -69,6 +73,8 @@ namespace DiscordBot.Classes
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
+
+            await Utilities.ClearMessages(ctx.Channel, delay: 4000);
         }
 
         [Command("Deaf")]
@@ -84,6 +90,8 @@ namespace DiscordBot.Classes
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
+
+            await Utilities.ClearMessages(ctx.Channel, delay: 3000);
         }
 
         [Command("Mute")]
@@ -99,6 +107,8 @@ namespace DiscordBot.Classes
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
+
+            await Utilities.ClearMessages(ctx.Channel, delay: 3000);
         }
 
         [Command("Ban")]
@@ -141,6 +151,8 @@ namespace DiscordBot.Classes
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
+
+            await Utilities.ClearMessages(ctx.Channel, delay: 3000);
         }
 
         [Command("MoveAll")]
@@ -163,6 +175,27 @@ namespace DiscordBot.Classes
             }
             else
                 await ctx.RespondAsync("You do not have enough permission.");
+
+            await Utilities.ClearMessages(ctx.Channel, delay: 3000);
+        }
+
+        [Command("Remove")]
+        public async Task RemoveMessages(CommandContext ctx, int number = 10)
+        {
+            if (ctx.Member.Hierarchy >= ctx.Guild.GetMemberAsync(Bot.ApplicationId).Result.Hierarchy)
+            {
+                if (number > 100)
+                    number = 100;
+
+                await ctx.RespondAsync($"{number} messages are deleted.");
+                await Utilities.ClearMessages(ctx.Channel, number + 2, 1000); // number + (command message + bot message)
+            }
+            else
+            {
+                await ctx.RespondAsync("You do not have enough permission.");
+                await Utilities.ClearMessages(ctx.Channel, 2, 1000); // number + (command message + bot message)
+            }
+
         }
 
         #region test

@@ -67,5 +67,9 @@ namespace DiscordBot.Classes
 
             return LavalinkConfig;
         }
+
+        public static List<LavalinkTrack> NewTrackList() {
+            return new List<LavalinkTrack>();
+        } 
     }
 }
